@@ -21,7 +21,7 @@ seating_preferences = [
     "needs wheelchair access",
     "likes bar seating",
 ]
-relationships = [
+tag = [
     " ",
     "regular customer",
     "VIP",
@@ -44,7 +44,8 @@ for _ in range(5):
         "last_visit": fake.date_this_year(),
         "food_preferences": random.choice(food_preferences),
         "seating_preferences": random.choice(seating_preferences),
-        "relationships": random.choice(relationships),
+        "tag": random.choice(tag),
+        "visit_history": [random.randint(0, 7) for _ in range(24)]
     }
     data.append(row)
 
@@ -65,21 +66,37 @@ llm = ChatOpenAI(
 agent = create_spark_dataframe_agent(llm=llm, df=df, verbose=True)
 
 st.title(f"Guest Data Insights")
-st.subheader(f"Retrieval augmented generation with spark db & gpt")
+st.subheader(f"Retrieval Augmented Generation (Spark + Gpt)")
 result_df = df.select("guest_name", "last_visit" ,"total_visits", "total_spend").limit(5)
 
 label = "(Limit 5 rows shown):"
 st.caption(label)
-st.table(result_df.toPandas())
+st.dataframe(df.toPandas(), column_config={
+    "id": None,
+       "birthday":None,
+       "email": None,
+       "first_visit": None,
+       "food_preferences": None,
+       "notes": None,
+       "relationships": None,
+       "seating_preferences": None,
+       "phone": None,
+        "visit_history": st.column_config.LineChartColumn(
+            "visit_frequency", y_min=0, y_max=7
+        ),
+    },
+)
+
 
 if prompt := st.chat_input(
     "As a restaurant owner, what are useful insights you can tell me about my guests?"
 ):
+    instruction = " Only include insights about average spend, visit and and food and seating preferences"
     st.chat_message("user").write(prompt)
     with st.chat_message("assistant"):
         st_callback = StreamlitCallbackHandler(
             st.container(),
             max_thought_containers=20,
         )
-        response = agent.run(prompt, callbacks=[st_callback])
+        response = agent.run(prompt + instruction, callbacks=[st_callback])
         st.write(response)
