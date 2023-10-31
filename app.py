@@ -30,7 +30,7 @@ relationships = [
 
 # Generate and insert a small amount of fake data for this demo
 data = []
-for _ in range(10):
+for _ in range(5):
     row = {
         "id": str(random.randint(1000, 9999)),
         "guest_name": fake.name(),
@@ -54,9 +54,7 @@ df = spark.createDataFrame(data)
 # NOTE: This requires a valid API key, initialized as an environment variable
 
 # NOTE: gpt-3.5 hallucinates and produces poor results
-
 #model = "gpt-3.5-turbo"
-
 model = "gpt-4"
 llm = ChatOpenAI(
     model=model,
@@ -66,12 +64,12 @@ llm = ChatOpenAI(
 
 agent = create_spark_dataframe_agent(llm=llm, df=df, verbose=True)
 
-st.title(f"Spark DB LLM Query Interface")
-
+st.title(f"Guest Data Insights")
+st.subheader(f"Retrieval augmented generation with spark db & gpt")
 result_df = df.select("guest_name", "last_visit" ,"total_visits", "total_spend").limit(5)
 
 label = "(Limit 5 rows shown):"
-st.write(label)
+st.caption(label)
 st.table(result_df.toPandas())
 
 if prompt := st.chat_input(
